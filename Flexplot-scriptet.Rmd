@@ -1,0 +1,96 @@
+---
+title: "Untitled"
+author: "Erik Olsson"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(flexplot)
+library(lme4)
+# statistics at slu https://www.slu.se/en/Collaborative-Centres-and-Projects/centreforstatistics/knowledge-base/statisticsslu-seminar-series-and-workshops/
+# https://www.youtube.com/watch?v=DtvqyqTzoQQ&ab_channel=QuantPsych
+
+data <- read.csv("jedi.csv")
+
+baseline_model <- lmer(darkness ~ 1 + (1 | dojo_id), data = data)
+baseline_model1 <- glmer(darkness ~ 1 + (1 | dojo_id), data = data) # use glmer för generalised linear mixed effects models
+estimates(baseline_model)
+estimates(baseline_model1)
+
+# anger just fixed
+fixed_anger <- lmer(darkness ~ 1+ anger + (1 | dojo_id), data = data)
+estimates(fixed_anger)
+
+#anger fixed + random 
+random_anger <- lmer(darkness ~ 1+ anger + (1 +anger | dojo_id), data = data)
+estimates(random_anger)
+
+#model
+model <-lmer(darkness ~ anger + emotional_bonds +
+               (anger + emotional_bonds | dojo_id),
+             data=data) 
+estimates(model)
+  
+#visualize model
+visualize(model, plot = "model")
+#hey, model looks good. Looks like model fit data quite well-
+
+
+visualize(model, plot = "model", 
+          formula = darkness~ emotional_bonds + dojo_id, sample = 6)
+# yes, the impact of emotional_bonds seem to vary between dojo's, should probably model it as a random effect
+
+visualize(model, plot = "model", 
+          formula = darkness~ anger + dojo_id, sample = 30)
+#hmm, the impact of anger does not seem to vary between dojo's, the black line, i.e. the fixed effect would probably be enough. 
+# good idea to do a model comparisson between model with anger as fixed effect vs model with anger as random effect(and fixed effect)
+
+#fit reduced model
+reduced_model <- lmer(darkness ~ anger + emotional_bonds +
+               (emotional_bonds | dojo_id),
+             data=data) 
+# plot to compare fit of two models
+compare.fits(formula = darkness ~ emotional_bonds | anger + dojo_id,
+             model1 = model, model2 =reduced_model , data = data)
+
+# statistical comparison of two models
+model.comparison(model, reduced_model)
+
+# seems we should keep the full model. Thereby continue to model anger as random effect
+
+estimates(model)
+```
+
+
+```{r}
+# Logistic Regression 
+# try residual diagnostics with DHARMa
+library(DHARMa)
+
+testData = createData(sampleSize = 250)
+fittedModel <- glmer(observedResponse ~ Environment1 + (1|group) , 
+                     family = "poisson", data = testData)
+
+simulationOutput <- simulateResiduals(fittedModel = fittedModel, plot = F)
+
+
+residuals(simulationOutput)
+plot(simulationOutput)
+
+```
+
+```{r}
+# Plott binary outcome with only categorical predictors, Alluvial plot
+# https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html
+```
+
+
+
+
